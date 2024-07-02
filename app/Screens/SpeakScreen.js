@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
-import * as Permissions from 'expo-permissions';
+// import { Permissions } from 'expo';
 import { Video } from 'expo-av';
 import CustomButton from '../../components/CustomButton'
-
+// import {expect, jest, test} from '@jest/globals';
 export default function SpeakScreen({ navigation }) {
   const [recording, setRecording] = useState();
   const [currentState, setCurrentState] = useState('idle'); // 'idle', 'listening', 'loading', 'thinking'
   const [videoUrl, setVideoUrl] = useState('');
   const [sound, setSound] = useState();
-
+  const [permissionResponse, requestPermission] = Audio.usePermissions();
+//   jest.mock('expo', () => ({
+//     Permissions: {
+//         askAsync: jest.fn(),
+//     }
+// }));
   useEffect(() => {
     return sound
       ? () => {
@@ -19,26 +24,26 @@ export default function SpeakScreen({ navigation }) {
       : undefined;
   }, [sound]);
 
-  const startRecording = async () => {
+  async function startRecording() {
     try {
-      const permission = await Permissions.askAsync(Permissions.AUDIO_RECORDING);
-      if (permission.status === 'granted') {
-        setCurrentState('listening');
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-        const { recording } = await Audio.Recording.createAsync(
-          Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
-        );
-        setRecording(recording);
-      } else {
-        alert('Permission to access microphone is required!');
+      if (permissionResponse.status !== 'granted') {
+        console.log('Requesting permission..');
+        await requestPermission();
       }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      console.log('Starting recording..');
+      const { recording } = await Audio.Recording.createAsync( Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      console.log('Recording started');
     } catch (err) {
       console.error('Failed to start recording', err);
     }
-  };
+  }
 
   const stopRecording = async () => {
     setCurrentState('loading');
